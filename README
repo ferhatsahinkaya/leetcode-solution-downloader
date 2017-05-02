@@ -1,7 +1,5 @@
 - If you don't have python3 installed, execute
-```
 brew install python3
-```
 
 - If you don't have BeautifulSoup module installed, execute
 python3 -m pip install bs4
