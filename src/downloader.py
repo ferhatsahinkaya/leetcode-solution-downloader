@@ -1,9 +1,11 @@
+import json
 import re
 import requests
 from bs4 import BeautifulSoup
 
 import constants
 from input import Input
+from util import Util
 
 
 class Downloader:
@@ -43,10 +45,12 @@ class Downloader:
 
     def save_solutions(self, questions):
         for question in questions:
-            response = self.session.get(constants.BASE_URL + question + "submissions")
-            submissions = BeautifulSoup(response.content, "html.parser").findAll("a", attrs={
-                "href": re.compile(r"/submissions/detail/*/")})
-            self.save_solution(question, Downloader.get_latest_accepted_submission(submissions))
+            question_name = Util.remove_prefix_suffix(question, "/problems/", "/")
+            response = self.session.get(
+                "https://leetcode.com/api/submissions/" + question_name + "/?format=json&offset=0")
+            accepted_submissions = self.get_latest_accepted_submission(json.loads(response.content))
+            if accepted_submissions:
+                self.save_solution(question, accepted_submissions[0]["url"])
 
     def download(self):
         self.login()
@@ -56,7 +60,8 @@ class Downloader:
 
     @staticmethod
     def get_latest_accepted_submission(submissions):
-        return [submission for submission in submissions if submission.strong][0]['href']
+        return [submission for submission in submissions["submissions_dump"] if
+                submission['status_display'] == 'Accepted']
 
     @staticmethod
     def get_attribute_value(tag, attribute, next_attribute):
