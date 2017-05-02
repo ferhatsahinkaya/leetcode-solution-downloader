@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 
 import constants
 from input import Input
-from util import Util
 
 
 class Downloader:
@@ -20,18 +19,6 @@ class Downloader:
                               , "csrfmiddlewaretoken": self.get_token()},
                           headers={"Referer": constants.LOGIN_URL})
 
-    def get_tags(self):
-        response = self.session.get(constants.ALGORITHMS_URL)
-        return [tag['href'] for tag in
-                BeautifulSoup(response.content, "html.parser").findAll("a", attrs={"href": re.compile(r"/tag/*/")})]
-
-    def get_questions(self, tag):
-        response = self.session.get(constants.BASE_URL + tag)
-        questions = BeautifulSoup(response.content, "html.parser") \
-            .find("table", attrs={"id": "question_list"}).tbody.findAll("tr")
-        return [question.find("a", attrs={"href": re.compile(r"/problems/*/")})['href'] for question in
-                questions if question.find("span", attrs={"class": "ac"}) is not None]
-
     def save_solution(self, question, submission):
         response = self.session.get(constants.BASE_URL + submission)
         soup = BeautifulSoup(response.content, "html.parser")
@@ -45,18 +32,22 @@ class Downloader:
 
     def save_solutions(self, questions):
         for question in questions:
-            question_name = Util.remove_prefix_suffix(question, "/problems/", "/")
-            response = self.session.get(
-                "https://leetcode.com/api/submissions/" + question_name + "/?format=json&offset=0")
+            response = self.session.get(constants.SUBMISSIONS_URL + question + constants.SUBMISSION_PARAMETERS)
             accepted_submissions = self.get_latest_accepted_submission(json.loads(response.content))
             if accepted_submissions:
-                self.save_solution(question, accepted_submissions[0]["url"])
+                self.save_solution("/problems/" + question + "/", accepted_submissions[0]["url"])
+            else:
+                print("No accepted solution found for " + question)
 
     def download(self):
         self.login()
-        for tag in self.get_tags():
-            print("Saving solutions under '" + tag + "'")
-            self.save_solutions(self.get_questions(tag))
+        response = self.session.get(constants.ALGORITHMS_URL)
+        self.save_solutions(self.get_questions(json.loads(response.content)))
+
+    @staticmethod
+    def get_questions(problems):
+        return [question['stat']['question__title_slug'] for question in
+                problems['stat_status_pairs']]
 
     @staticmethod
     def get_latest_accepted_submission(submissions):
