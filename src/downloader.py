@@ -31,7 +31,7 @@ class Downloader:
     def save_solution(self, problem_set, question, submission):
         response = self.session.get(constants.BASE_URL + submission)
         soup = BeautifulSoup(response.content, "html.parser")
-        file_name = soup.find("a", attrs={"href": question}).text
+        file_name = soup.find("a", attrs={"href": "/problems/" + question + "/"}).text
         tag = soup.find("script", text=re.compile(r"submissionCode:*")).text
         code_type = Downloader.get_attribute_value(tag, "getLangDisplay", "submissionCode")
         code = Downloader.get_attribute_value(tag, "submissionCode", "editCodeUrl")
@@ -42,7 +42,7 @@ class Downloader:
             response = self.session.get(constants.SUBMISSIONS_URL + question + constants.SUBMISSION_PARAMETERS)
             accepted_submissions = self.get_latest_accepted_submission(json.loads(response.content))
             if accepted_submissions:
-                self.save_solution(problem_set, "/problems/" + question + "/", accepted_submissions[0]["url"])
+                self.save_solution(problem_set, question, accepted_submissions[0]["url"])
             else:
                 print("No accepted solution found for " + question)
 
