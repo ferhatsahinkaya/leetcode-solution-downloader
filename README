@@ -1,3 +1,5 @@
+This project is to download latest accepted LeetCode solutions of the given user
+
 - If you don't have python3 installed, execute
 brew install python3
 
