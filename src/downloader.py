@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -19,30 +20,37 @@ class Downloader:
                               , "csrfmiddlewaretoken": self.get_token()},
                           headers={"Referer": constants.LOGIN_URL})
 
-    def save_solution(self, question, submission):
+    def save_solution_file(self, problem_set, file_name, code_type, code):
+        if not os.path.exists(self.path + "/" + problem_set):
+            print("Creating folder '" + self.path + "/" + problem_set + "'")
+            os.makedirs(self.path + "/" + problem_set)
+        print("Saving solution for '" + file_name + "'")
+        with open("{0}/{1}/{2}.{3}".format(self.path, problem_set, file_name, code_type), 'w') as file_:
+            file_.write(code)
+
+    def save_solution(self, problem_set, question, submission):
         response = self.session.get(constants.BASE_URL + submission)
         soup = BeautifulSoup(response.content, "html.parser")
         file_name = soup.find("a", attrs={"href": question}).text
         tag = soup.find("script", text=re.compile(r"submissionCode:*")).text
         code_type = Downloader.get_attribute_value(tag, "getLangDisplay", "submissionCode")
         code = Downloader.get_attribute_value(tag, "submissionCode", "editCodeUrl")
-        print("Saving solution for '" + file_name + "'")
-        with open("{0}/{1}.{2}".format(self.path, file_name, code_type), 'w') as file_:
-            file_.write(code)
+        self.save_solution_file(problem_set, file_name, code_type, code)
 
-    def save_solutions(self, questions):
+    def save_solutions(self, problem_set, questions):
         for question in questions:
             response = self.session.get(constants.SUBMISSIONS_URL + question + constants.SUBMISSION_PARAMETERS)
             accepted_submissions = self.get_latest_accepted_submission(json.loads(response.content))
             if accepted_submissions:
-                self.save_solution("/problems/" + question + "/", accepted_submissions[0]["url"])
+                self.save_solution(problem_set, "/problems/" + question + "/", accepted_submissions[0]["url"])
             else:
                 print("No accepted solution found for " + question)
 
     def download(self):
         self.login()
-        response = self.session.get(constants.ALGORITHMS_URL)
-        self.save_solutions(self.get_questions(json.loads(response.content)))
+        for problem_set in constants.PROBLEM_SETS:
+            response = self.session.get(constants.PROBLEMS_URL + problem_set)
+            self.save_solutions(problem_set, self.get_questions(json.loads(response.content)))
 
     @staticmethod
     def get_questions(problems):
