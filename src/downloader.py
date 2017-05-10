@@ -50,12 +50,12 @@ class Downloader:
         self.login()
         for problem_set in constants.PROBLEM_SETS:
             response = self.session.get(constants.PROBLEMS_URL + problem_set)
-            self.save_solutions(problem_set, self.get_questions(json.loads(response.content)))
+            self.save_solutions(problem_set, self.get_accepted_questions(json.loads(response.content)))
 
     @staticmethod
-    def get_questions(problems):
+    def get_accepted_questions(problems):
         return [question['stat']['question__title_slug'] for question in
-                problems['stat_status_pairs']]
+                problems['stat_status_pairs'] if question['status'] == "ac"]
 
     @staticmethod
     def get_latest_accepted_submission(submissions):
